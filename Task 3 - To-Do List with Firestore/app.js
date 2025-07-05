@@ -10,7 +10,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  // Removed for GitHub
+  // get secret.txt
 };
 
 const app = initializeApp(firebaseConfig);
