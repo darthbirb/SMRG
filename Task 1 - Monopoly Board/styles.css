@@ -1,0 +1,27 @@
+.corner{
+    border: 2px solid black;
+    padding: 0%;
+    aspect-ratio: 1/1;
+}
+
+.vertical-property{
+    border: 2px solid black;
+    padding: 0%;
+}
+
+.horizontal-property{
+    border: 2px solid black;
+    padding: 0%;
+    aspect-ratio: 9/4;
+}
+
+.monopoly-board{
+    width: 40%;
+    aspect-ratio: 1/1;
+    
+}
+
+.board-outline{
+    border : 1px solid black;
+}
+
