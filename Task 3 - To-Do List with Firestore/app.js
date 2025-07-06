@@ -1,21 +1,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
-const firebaseConfig = {
-  // get secret.txt
-};
+import { firebaseConfig, projectId } from './secrets.js';
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const todosCollection = collection(db, "todos");
+const auth = getAuth(app);
+
+const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/todos`;
+
+let idToken = null;
+let todos = [];
 
 const todoForm = document.getElementById('todo-form');
 const todoInput = document.getElementById('todo-input');
@@ -24,37 +18,128 @@ const pendingList = document.getElementById('pending-list');
 const completedList = document.getElementById('completed-list');
 const resetSearch = document.getElementById('reset-search');
 
-let todos = [];
+signInAnonymously(auth)
+  .then(async (userCredential) => {
+    const user = userCredential.user;
+    idToken = await user.getIdToken();
+    fetchTodos();
+  })
+  .catch((error) => {
+    console.error("Auth failed:", error);
+    alert("Could not sign in.");
+  });
 
 todoForm.addEventListener('submit', async function (e) {
   e.preventDefault();
   const text = todoInput.value.trim();
   if (!text) return;
-
-  const newTodo = { text, completed: false };
-
   try {
-    const docRef = await addDoc(todosCollection, newTodo);
-    todos.push({ id: docRef.id, ...newTodo });
+    await addTodo(text);
     todoInput.value = '';
-    renderTodos();
   } catch (error) {
-    console.error("Error adding todo: ", error);
-    alert("Could not save todo. Try again.");
+    console.error("Add failed:", error);
+    alert("Could not save todo.");
   }
 });
 
 searchInput.addEventListener('input', renderTodos);
-resetSearch.addEventListener("click", clearSearch);
-
-function clearSearch() {
+resetSearch.addEventListener("click", () => {
   searchInput.value = '';
+  renderTodos();
+});
+
+async function addTodo(text) {
+  const body = {
+    fields: {
+      text: { stringValue: text },
+      completed: { booleanValue: false }
+    }
+  };
+
+  const response = await fetch(baseUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) throw new Error("Failed to add todo");
+
+  const data = await response.json();
+  const id = data.name.split("/").pop();
+  todos.push({ id, text, completed: false });
+  renderTodos();
+}
+
+async function fetchTodos() {
+  const response = await fetch(baseUrl, {
+    headers: {
+      Authorization: `Bearer ${idToken}`
+    }
+  });
+
+  if (!response.ok) {
+    console.error("Fetch error:", await response.text());
+    alert("Failed to fetch todos.");
+    return;
+  }
+
+  const data = await response.json();
+  todos = (data.documents || []).map(doc => {
+    const id = doc.name.split("/").pop();
+    return {
+      id,
+      text: doc.fields.text.stringValue,
+      completed: doc.fields.completed.booleanValue
+    };
+  });
+
+  renderTodos();
+}
+
+async function toggleTodoCompleted(todo) {
+  const url = `${baseUrl}/${todo.id}`;
+  const body = {
+    fields: {
+      completed: { booleanValue: !todo.completed }
+    }
+  };
+
+  const response = await fetch(`${url}?updateMask.fieldPaths=completed`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) throw new Error("Failed to update");
+
+  todo.completed = !todo.completed;
+  renderTodos();
+}
+
+async function deleteTodo(todo) {
+  const url = `${baseUrl}/${todo.id}`;
+
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${idToken}`
+    }
+  });
+
+  if (!response.ok) throw new Error("Failed to delete");
+
+  todos = todos.filter(t => t.id !== todo.id);
   renderTodos();
 }
 
 function renderTodos() {
   const searchTerm = searchInput.value.toLowerCase();
-
   const pending = todos.filter(t => !t.completed && t.text.toLowerCase().includes(searchTerm));
   const completed = todos.filter(t => t.completed);
 
@@ -62,13 +147,11 @@ function renderTodos() {
   completedList.innerHTML = '';
 
   pending.forEach(todo => {
-    const li = createTodoElement(todo);
-    pendingList.appendChild(li);
+    pendingList.appendChild(createTodoElement(todo));
   });
 
   completed.forEach(todo => {
-    const li = createTodoElement(todo);
-    completedList.appendChild(li);
+    completedList.appendChild(createTodoElement(todo));
   });
 }
 
@@ -89,30 +172,15 @@ function createTodoElement(todo) {
   completeBtn.className = 'btn btn-sm btn-success';
   completeBtn.textContent = todo.completed ? 'Undo' : 'Complete';
 
-  completeBtn.onclick = async () => {
-    todo.completed = !todo.completed;
-    try {
-      await updateDoc(doc(db, "todos", todo.id), { completed: todo.completed });
-      renderTodos();
-    } catch (err) {
-      console.error("Failed to update todo status:", err);
-      alert("Could not update todo. Try again.");
-    }
-  };
+  completeBtn.onclick = () => toggleTodoCompleted(todo);
 
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'btn btn-sm btn-danger';
   deleteBtn.textContent = 'Delete';
 
-  deleteBtn.onclick = async () => {
-    if (!confirm("Delete this todo?")) return;
-    try {
-      await deleteDoc(doc(db, "todos", todo.id));
-      todos = todos.filter(t => t.id !== todo.id);
-      renderTodos();
-    } catch (err) {
-      console.error("Failed to delete todo:", err);
-      alert("Could not delete todo.");
+  deleteBtn.onclick = () => {
+    if (confirm("Delete this todo?")) {
+      deleteTodo(todo);
     }
   };
 
@@ -125,19 +193,3 @@ function createTodoElement(todo) {
 
   return li;
 }
-
-async function fetchTodos() {
-  try {
-    const querySnapshot = await getDocs(todosCollection);
-    todos = [];
-    querySnapshot.forEach(docSnap => {
-      todos.push({ id: docSnap.id, ...docSnap.data() });
-    });
-    renderTodos();
-  } catch (error) {
-    console.error("Error fetching to-dos", error);
-    alert("Could not load to-dos. Refresh!");
-  }
-}
-
-fetchTodos();
