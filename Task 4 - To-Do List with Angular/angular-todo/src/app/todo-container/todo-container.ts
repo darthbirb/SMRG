@@ -1,8 +1,10 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { TodoForm } from '../todo-form/todo-form';
 import { SearchBar } from '../search-bar/search-bar';
 import { TodoList } from '../todo-list/todo-list';
 import { Todo } from '../models/todo.model';
+import { FirebaseService } from '../services/firebase.service';
+import { catchError, finalize, switchMap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-todo-container',
@@ -10,10 +12,14 @@ import { Todo } from '../models/todo.model';
   templateUrl: './todo-container.html',
   styleUrl: './todo-container.css',
 })
-export class TodoContainer {
+export class TodoContainer implements OnInit {
+  private readonly firebaseService = inject(FirebaseService);
+
   // State management using signals
   protected readonly todos = signal<Todo[]>([]);
   protected readonly searchTerm = signal<string>('');
+  protected readonly isLoading = signal<boolean>(false);
+  protected readonly error = signal<string | null>(null);
 
   // Computed values for filtered todos
   protected readonly pendingTodos = computed(() => {
@@ -27,30 +33,87 @@ export class TodoContainer {
     return this.todos().filter((todo) => todo.completed);
   });
 
+  ngOnInit(): void {
+    this.initializeFirebase();
+  }
+
+  private initializeFirebase(): void {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    this.firebaseService
+      .initializeFirebase()
+      .pipe(
+        switchMap(() => this.firebaseService.getTodos()),
+        catchError((error) => {
+          this.error.set(error.message || 'Failed to initialize Firebase');
+          return [];
+        }),
+        finalize(() => this.isLoading.set(false))
+      )
+      .subscribe((todos) => {
+        this.todos.set(todos);
+      });
+  }
+
   // Methods for todo operations
   protected addTodo(text: string): void {
     if (!text.trim()) return;
 
-    const newTodo: Todo = {
-      id: this.generateId(),
-      text: text.trim(),
-      completed: false,
-    };
+    this.isLoading.set(true);
+    this.error.set(null);
 
-    this.todos.update((todos) => [...todos, newTodo]);
+    this.firebaseService
+      .addTodo(text)
+      .pipe(
+        catchError((error) => {
+          this.error.set(error.message || 'Could not add todo');
+          throw error;
+        }),
+        finalize(() => this.isLoading.set(false))
+      )
+      .subscribe((newTodo) => {
+        this.todos.update((todos) => [...todos, newTodo]);
+      });
   }
 
   protected toggleTodo(todo: Todo): void {
-    this.todos.update((todos) =>
-      todos.map((t) =>
-        t.id === todo.id ? { ...t, completed: !t.completed } : t
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    this.firebaseService
+      .toggleTodo(todo)
+      .pipe(
+        catchError((error) => {
+          this.error.set(error.message || 'Could not update todo');
+          throw error;
+        }),
+        finalize(() => this.isLoading.set(false))
       )
-    );
+      .subscribe((updatedTodo) => {
+        this.todos.update((todos) =>
+          todos.map((t) => (t.id === updatedTodo.id ? updatedTodo : t))
+        );
+      });
   }
 
   protected deleteTodo(todo: Todo): void {
     if (confirm('Delete this todo?')) {
-      this.todos.update((todos) => todos.filter((t) => t.id !== todo.id));
+      this.isLoading.set(true);
+      this.error.set(null);
+
+      this.firebaseService
+        .deleteTodo(todo)
+        .pipe(
+          catchError((error) => {
+            this.error.set(error.message || 'Could not delete todo');
+            throw error;
+          }),
+          finalize(() => this.isLoading.set(false))
+        )
+        .subscribe(() => {
+          this.todos.update((todos) => todos.filter((t) => t.id !== todo.id));
+        });
     }
   }
 
@@ -60,9 +123,5 @@ export class TodoContainer {
 
   protected clearSearch(): void {
     this.searchTerm.set('');
-  }
-
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 }
