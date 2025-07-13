@@ -1,17 +1,5 @@
 <div class="container">
-  <h1 class="text-center text-white mt-3">To-Do List</h1>
-
-  @if (error()) {
-  <div class="alert alert-danger mt-3" role="alert">
-    {{ error() }}
-  </div>
-  } @if (isLoading()) {
-  <div class="text-center text-white mt-3">
-    <div class="spinner-border" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-  </div>
-  }
+  <h1 class="text-center text-white">To-Do List</h1>
 
   <app-todo-form (addTodo)="addTodo($event)"></app-todo-form>
 

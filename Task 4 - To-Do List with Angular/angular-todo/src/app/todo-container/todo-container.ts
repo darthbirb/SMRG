@@ -4,7 +4,7 @@ import { SearchBar } from '../search-bar/search-bar';
 import { TodoList } from '../todo-list/todo-list';
 import { Todo } from '../models/todo.model';
 import { FirebaseService } from '../services/firebase.service';
-import { catchError, finalize, switchMap } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-todo-container',
@@ -18,8 +18,6 @@ export class TodoContainer implements OnInit {
   // State management using signals
   protected readonly todos = signal<Todo[]>([]);
   protected readonly searchTerm = signal<string>('');
-  protected readonly isLoading = signal<boolean>(false);
-  protected readonly error = signal<string | null>(null);
 
   // Computed values for filtered todos
   protected readonly pendingTodos = computed(() => {
@@ -38,18 +36,14 @@ export class TodoContainer implements OnInit {
   }
 
   private initializeFirebase(): void {
-    this.isLoading.set(true);
-    this.error.set(null);
-
     this.firebaseService
       .initializeFirebase()
       .pipe(
         switchMap(() => this.firebaseService.getTodos()),
         catchError((error) => {
-          this.error.set(error.message || 'Failed to initialize Firebase');
+          console.error('Failed to initialize Firebase:', error);
           return [];
-        }),
-        finalize(() => this.isLoading.set(false))
+        })
       )
       .subscribe((todos) => {
         this.todos.set(todos);
@@ -60,17 +54,13 @@ export class TodoContainer implements OnInit {
   protected addTodo(text: string): void {
     if (!text.trim()) return;
 
-    this.isLoading.set(true);
-    this.error.set(null);
-
     this.firebaseService
       .addTodo(text)
       .pipe(
         catchError((error) => {
-          this.error.set(error.message || 'Could not add todo');
+          console.error('Could not add todo:', error);
           throw error;
-        }),
-        finalize(() => this.isLoading.set(false))
+        })
       )
       .subscribe((newTodo) => {
         this.todos.update((todos) => [...todos, newTodo]);
@@ -78,17 +68,13 @@ export class TodoContainer implements OnInit {
   }
 
   protected toggleTodo(todo: Todo): void {
-    this.isLoading.set(true);
-    this.error.set(null);
-
     this.firebaseService
       .toggleTodo(todo)
       .pipe(
         catchError((error) => {
-          this.error.set(error.message || 'Could not update todo');
+          console.error('Could not update todo:', error);
           throw error;
-        }),
-        finalize(() => this.isLoading.set(false))
+        })
       )
       .subscribe((updatedTodo) => {
         this.todos.update((todos) =>
@@ -99,17 +85,13 @@ export class TodoContainer implements OnInit {
 
   protected deleteTodo(todo: Todo): void {
     if (confirm('Delete this todo?')) {
-      this.isLoading.set(true);
-      this.error.set(null);
-
       this.firebaseService
         .deleteTodo(todo)
         .pipe(
           catchError((error) => {
-            this.error.set(error.message || 'Could not delete todo');
+            console.error('Could not delete todo:', error);
             throw error;
-          }),
-          finalize(() => this.isLoading.set(false))
+          })
         )
         .subscribe(() => {
           this.todos.update((todos) => todos.filter((t) => t.id !== todo.id));
