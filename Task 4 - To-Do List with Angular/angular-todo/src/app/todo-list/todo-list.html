@@ -1,10 +1,42 @@
 <div class="d-flex flex-column flex-md-row gap-4 mt-4">
   <div class="flex-fill">
     <h3 class="text-center text-white">Pending</h3>
-    <ul class="list-group"></ul>
+    <ul class="list-group">
+      @for (todo of pendingTodos; track todo.id) {
+      <li class="list-group-item bg-dark-subtle">
+        <div class="d-flex justify-content-between align-items-center">
+          <span>{{ todo.text }}</span>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-success" (click)="onToggleTodo(todo)">
+              Complete
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="onDeleteTodo(todo)">
+              Delete
+            </button>
+          </div>
+        </div>
+      </li>
+      }
+    </ul>
   </div>
   <div class="flex-fill">
     <h3 class="text-center text-white">Completed</h3>
-    <ul class="list-group"></ul>
+    <ul class="list-group">
+      @for (todo of completedTodos; track todo.id) {
+      <li class="list-group-item bg-dark-subtle">
+        <div class="d-flex justify-content-between align-items-center">
+          <span>{{ todo.text }}</span>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-success" (click)="onToggleTodo(todo)">
+              Undo
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="onDeleteTodo(todo)">
+              Delete
+            </button>
+          </div>
+        </div>
+      </li>
+      }
+    </ul>
   </div>
 </div>
