@@ -1,0 +1,20 @@
+<div class="container">
+  <h1 class="text-center text-white">To-Do List</h1>
+
+  <app-todo-form (addTodo)="addTodo($event)"></app-todo-form>
+
+  <app-search-bar
+    [searchTerm]="searchTerm()"
+    (searchChange)="updateSearchTerm($event)"
+    (clearSearch)="clearSearch()"
+  >
+  </app-search-bar>
+
+  <app-todo-list
+    [pendingTodos]="pendingTodos()"
+    [completedTodos]="completedTodos()"
+    (toggleTodo)="toggleTodo($event)"
+    (deleteTodo)="deleteTodo($event)"
+  >
+  </app-todo-list>
+</div>

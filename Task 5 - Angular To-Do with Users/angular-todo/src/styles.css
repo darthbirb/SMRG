@@ -1,0 +1,12 @@
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.completed-flag {
+  font-size: 0.85rem;
+  color: green;
+  font-weight: 500;
+}
+
