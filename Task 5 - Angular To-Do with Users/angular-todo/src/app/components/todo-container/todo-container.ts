@@ -2,8 +2,8 @@ import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { TodoForm } from '../todo-form/todo-form';
 import { SearchBar } from '../search-bar/search-bar';
 import { TodoList } from '../todo-list/todo-list';
-import { Todo } from '../models/todo.model';
-import { FirebaseService } from '../services/firebase.service';
+import { Todo } from '../../models/todo.model';
+import { FirebaseService } from '../../services/firebase.service';
 import { catchError, switchMap } from 'rxjs/operators';
 
 @Component({
