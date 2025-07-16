@@ -56,6 +56,44 @@ export class FirebaseService {
     );
   }
 
+  // Sign up with email and password
+  signUpWithEmail(email: string, password: string): Observable<void> {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${this.firebaseConfig.apiKey}`;
+    const body = {
+      email,
+      password,
+      returnSecureToken: true,
+    };
+    return this.http.post<AuthResponse>(url, body).pipe(
+      map((response) => {
+        this.idToken = response.idToken;
+      }),
+      catchError((error) => {
+        console.error('Sign up failed:', error);
+        throw new Error(error?.error?.error?.message || 'Sign up failed');
+      })
+    );
+  }
+
+  // Login with email and password
+  loginWithEmail(email: string, password: string): Observable<void> {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${this.firebaseConfig.apiKey}`;
+    const body = {
+      email,
+      password,
+      returnSecureToken: true,
+    };
+    return this.http.post<AuthResponse>(url, body).pipe(
+      map((response) => {
+        this.idToken = response.idToken;
+      }),
+      catchError((error) => {
+        console.error('Login failed:', error);
+        throw new Error(error?.error?.error?.message || 'Login failed');
+      })
+    );
+  }
+
   // Get authorization headers
   private getAuthHeaders(): HttpHeaders {
     if (!this.idToken) {
