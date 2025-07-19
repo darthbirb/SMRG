@@ -1,0 +1,15 @@
+<form class="row mt-3" (submit)="onSubmit($event)">
+  <div class="col-9">
+    <input
+      type="text"
+      class="form-control bg-light"
+      placeholder="Add a new todo"
+      required
+      [value]="todoText()"
+      (input)="onInputChange($event)"
+    />
+  </div>
+  <div class="col-3 d-grid">
+    <button type="submit" class="btn btn-primary">Add To-Do</button>
+  </div>
+</form>

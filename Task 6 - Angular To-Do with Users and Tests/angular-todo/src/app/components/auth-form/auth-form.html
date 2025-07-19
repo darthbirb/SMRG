@@ -1,0 +1,49 @@
+<div class="auth-container">
+  <mat-card class="auth-card">
+    <mat-card-title class="text-center mb-3 mt-3">
+      {{ isLogin() ? "Login" : "Sign Up" }}
+    </mat-card-title>
+    <form [formGroup]="authForm" (ngSubmit)="onSubmit()">
+      <div class="m-1">
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" type="email" required />
+        </mat-form-field>
+      </div>
+      <div class="m-1">
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>Password</mat-label>
+          <input matInput formControlName="password" type="password" required />
+        </mat-form-field>
+      </div>
+      <div class="m-1 d-flex justify-content-center">
+        <button
+          mat-raised-button
+          color="primary"
+          class="full-width"
+          type="submit"
+        >
+          {{ isLogin() ? "Login" : "Sign Up" }}
+        </button>
+      </div>
+    </form>
+    @if (error()) {
+    <div class="alert alert-danger my-2 text-center" role="alert">
+      {{ error() }}
+    </div>
+    }
+    <button
+      mat-button
+      color="accent"
+      class="toggle-btn"
+      type="button"
+      (click)="toggleMode()"
+    >
+      {{
+        isLogin()
+          ? "Don't have an account? Sign Up"
+          : "Already have an account? Login"
+      }}
+    </button>
+  </mat-card>
+</div>
